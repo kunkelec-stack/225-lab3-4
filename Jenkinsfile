@@ -43,16 +43,20 @@ pipeline {
         }
 
         stage('Deploy to Dev Environment') {
-            steps {
-                script {
-                    // This sets up the Kubernetes configuration using the specified KUBECONFIG
-                    def kubeConfig = readFile(KUBECONFIG)
-                    // This updates the deployment-dev.yaml to use the new image tag
-                    sh "sed -i 's|${DOCKER_IMAGE}:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|' deployment-dev.yaml"
-                    sh "kubectl apply -f deployment-dev.yaml"
-                }
+    steps {
+        script {
+            // This block provides the $KUBECONFIG variable
+            withCredentials([file(credentialsId: 'k8s-config', variable: 'KUBECONFIG')]) {
+                
+                // 1. Update the image tag
+                sh "sed -i 's|cithit/kunkelec:latest|cithit/kunkelec:build-${env.BUILD_NUMBER}|' deployment-dev.yaml"
+                
+                // 2. USE the variable in the command
+                sh "kubectl apply -f deployment-dev.yaml --kubeconfig=${KUBECONFIG}"
             }
         }
+    }
+}
         stage('Deploy to Prod Environment') {
             steps {
                 script {
